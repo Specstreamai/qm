@@ -32,6 +32,14 @@ export function scopeId(kind: ScopeKind, ref: string): ScopeId {
   return `${kind}:${ref}`;
 }
 
+/** The persona a turn wore, carried on what it posts so surfaces can show it. */
+export interface WornPersona {
+  id: string;
+  name: string;
+  /** Same shape as a project icon: one Unicode emoji, or a workspace custom emoji by name. */
+  icon?: { kind: "emoji"; value: string } | { kind: "custom"; name: string };
+}
+
 export function personalScope(principalId: string): ScopeId {
   return scopeId("personal", principalId);
 }
@@ -216,7 +224,7 @@ export interface Destination {
   audienceScopeId?: ScopeId;
   onBehalfOf?: string;
   relaySender?: string;
-  persona?: { id: string; name: string };
+  persona?: WornPersona;
   threadTs?: string;
   editRef?: string;
   unfurlLinks?: boolean;
@@ -521,5 +529,5 @@ export interface TurnResult {
   runtime?: TurnRuntime;
   scriptVerdict?: string;
   retracted?: string[];
-  persona?: { id: string; name: string };
+  persona?: WornPersona;
 }

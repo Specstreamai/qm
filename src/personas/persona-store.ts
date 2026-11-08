@@ -44,6 +44,21 @@ export interface PersonaAccess {
   role: PersonaRole;
   grantedBy: string;
   grantedAt: number;
+  /** A channel grant only: the channel wears this persona by default. */
+  pinned?: boolean;
+}
+
+export interface PersonaAccessEntry {
+  scopeId: ScopeId;
+  role: PersonaRole;
+  pinned?: boolean;
+}
+
+/** The channel already has another persona pinned; a channel pins at most one. */
+export class PersonaChannelPinned extends Error {
+  constructor(channel: ScopeId) {
+    super(`${channel} already has another persona pinned; unpin it there first`);
+  }
 }
 
 export interface PersonaFields {
@@ -61,7 +76,9 @@ export interface PersonaStore {
   version(id: string, version: number): Promise<PersonaVersion | null>;
   remove(id: string): Promise<boolean>;
   access(id: string): Promise<PersonaAccess[]>;
-  replaceAccess(id: string, access: ReadonlyArray<{ scopeId: ScopeId; role: PersonaRole }>, by: string): Promise<void>;
+  replaceAccess(id: string, access: ReadonlyArray<PersonaAccessEntry>, by: string): Promise<void>;
+  /** The persona pinned in a channel, if any. */
+  pinnedIn(channel: ScopeId): Promise<string | null>;
   roles(grantees: readonly ScopeId[], id?: string): Promise<Map<string, PersonaRole>>;
   listFor(grantees: readonly ScopeId[]): Promise<Array<Persona & { role: PersonaRole }>>;
 }
@@ -211,12 +228,19 @@ export function createPostgresPersonaStore(connectionString: string, opts: { id?
         role: r.role as PersonaRole,
         grantedBy: r.granted_by_alias as string,
         grantedAt: ms(r.granted_at),
+        ...(r.pinned ? { pinned: true } : {}),
       }));
     },
     async replaceAccess(id, access, by) {
       if (!access.some((entry) => entry.role === "owner")) throw new PersonaOwnerRequired();
       await withPgTransaction(await pool(), async (db) => {
         await db.query("SELECT 1 FROM personas WHERE id = $1 FOR UPDATE", [id]);
+        const pinTaken = await db.query(
+          `SELECT grantee_scope_id FROM persona_access
+            WHERE pinned AND persona_id <> $1 AND grantee_scope_id = ANY($2) LIMIT 1`,
+          [id, access.filter((entry) => entry.pinned).map((entry) => entry.scopeId)],
+        );
+        if (pinTaken.rows[0]) throw new PersonaChannelPinned(pinTaken.rows[0].grantee_scope_id as ScopeId);
         const user = await ensureUserIn(db, foldPrincipalId(by));
         const kept = access.map((entry) => entry.scopeId);
         await db.query("DELETE FROM persona_access WHERE persona_id = $1 AND NOT (grantee_scope_id = ANY($2))", [
@@ -224,14 +248,24 @@ export function createPostgresPersonaStore(connectionString: string, opts: { id?
           kept,
         ]);
         for (const entry of access)
-          await db.query(
-            `INSERT INTO persona_access (persona_id, grantee_scope_id, role, granted_by) VALUES ($1, $2, $3, $4)
+          await db
+            .query(
+              `INSERT INTO persona_access (persona_id, grantee_scope_id, role, pinned, granted_by) VALUES ($1, $2, $3, $4, $5)
              ON CONFLICT (persona_id, grantee_scope_id) DO UPDATE
-               SET role = EXCLUDED.role, granted_by = EXCLUDED.granted_by, granted_at = now()
-               WHERE persona_access.role IS DISTINCT FROM EXCLUDED.role`,
-            [id, entry.scopeId, entry.role, user],
-          );
+               SET role = EXCLUDED.role, pinned = EXCLUDED.pinned, granted_by = EXCLUDED.granted_by, granted_at = now()
+               WHERE (persona_access.role, persona_access.pinned) IS DISTINCT FROM (EXCLUDED.role, EXCLUDED.pinned)`,
+              [id, entry.scopeId, entry.role, entry.pinned === true, user],
+            )
+            .catch((e: unknown) => {
+              if ((e as { constraint?: string }).constraint === "persona_access_one_pin")
+                throw new PersonaChannelPinned(entry.scopeId);
+              throw e;
+            });
       });
+    },
+    async pinnedIn(channel) {
+      const rows = await q("SELECT persona_id FROM persona_access WHERE grantee_scope_id = $1 AND pinned", [channel]);
+      return (rows[0]?.persona_id as string | undefined) ?? null;
     },
     async roles(grantees, id) {
       const rows = await q(
