@@ -510,7 +510,7 @@ function fallbackFailed(failure: ProviderTurnError, fallback: ModelRoute, error:
       code,
       retryable: false,
       status: failure.status,
-      raw: failure.raw,
+      raw: `${failure.raw}\n${error instanceof ProviderTurnError ? error.raw : errMessage(error)}`,
       modelName: failure.modelName,
     },
   );
