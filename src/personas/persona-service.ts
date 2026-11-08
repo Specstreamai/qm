@@ -294,7 +294,7 @@ export function personaPrompt({ persona, scope, pinned }: PersonaForTurn): strin
   ];
   if (pinned)
     lines.push(
-      `This channel pinned ${persona.name}, so conversations here wear it and your Slack posts show its name and icon. An owner can unpin it on the persona page; one conversation can pick another persona.`,
+      `This channel pinned ${persona.name}. An owner can unpin it on the persona page; one conversation can pick another persona.`,
     );
   if (persona.description.trim()) lines.push(`Purpose: ${persona.description.trim()}`);
   if (persona.instructions.trim()) lines.push("", persona.instructions.trim());

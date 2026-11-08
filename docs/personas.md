@@ -77,7 +77,9 @@ under the same role check.
 
 Whatever a turn wearing a persona posts carries the persona's id and name on its delivery
 destination: replies, posts to other conversations, and cron output. Slack posts and
-edits those messages under the persona's name and icon (a Unicode emoji maps to its Slack
+edits those messages under the persona's name and icon, ahead of any deployment-wide
+`SLACK_BOT_DISPLAY_NAME`/`SLACK_BOT_ICON_EMOJI` override (needs `chat:write.customize`, which
+the app manifest requests) (a Unicode emoji maps to its Slack
 shortcode; a custom emoji is used by name; no icon keeps the default), and ends them with a
 `Persona: <name>` context line linking to the persona's page, next to the cron settings
 link when there is one. File uploads and the in-progress task card still show the app's own
