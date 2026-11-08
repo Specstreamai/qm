@@ -36,7 +36,6 @@ export type PersonaResult<T> =
 export interface PersonaForTurn {
   persona: Persona;
   scope: ScopeId;
-  /** Worn because the turn's channel pinned it, not because the conversation chose it. */
   pinned?: boolean;
 }
 
@@ -295,7 +294,7 @@ export function personaPrompt({ persona, scope, pinned }: PersonaForTurn): strin
   ];
   if (pinned)
     lines.push(
-      `This Slack channel has pinned ${persona.name}, so every conversation here wears it and your Slack posts here show its name and icon. A persona owner can unpin it from the persona page's Slack channels section or with \`PUT /v1/personas/:id/access\` (\`pinned\` on the channel's entry); a conversation can still pick another persona with \`PUT /v1/sessions/:id/persona\`.`,
+      `This channel pinned ${persona.name}, so conversations here wear it and your Slack posts show its name and icon. An owner can unpin it on the persona page; one conversation can pick another persona.`,
     );
   if (persona.description.trim()) lines.push(`Purpose: ${persona.description.trim()}`);
   if (persona.instructions.trim()) lines.push("", persona.instructions.trim());

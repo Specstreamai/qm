@@ -42,10 +42,6 @@ function slackEmojiName(icon: WornPersona["icon"]): string | undefined {
   return undefined;
 }
 
-/**
- * The name and icon a post goes out under: the persona the turn wore when there is one,
- * else the deployment's default. Slack shows these per message (`chat:write.customize`).
- */
 export function botIdentityArgs(persona?: WornPersona): BotIdentityOverride {
   const id = defaultIdentity;
   const username = persona?.name.trim() || id.username;

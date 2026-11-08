@@ -44,7 +44,6 @@ export interface PersonaAccess {
   role: PersonaRole;
   grantedBy: string;
   grantedAt: number;
-  /** A channel grant only: the channel wears this persona by default. */
   pinned?: boolean;
 }
 
@@ -54,7 +53,6 @@ export interface PersonaAccessEntry {
   pinned?: boolean;
 }
 
-/** The channel already has another persona pinned; a channel pins at most one. */
 export class PersonaChannelPinned extends Error {
   constructor(channel: ScopeId) {
     super(`${channel} already has another persona pinned; unpin it there first`);
@@ -77,7 +75,6 @@ export interface PersonaStore {
   remove(id: string): Promise<boolean>;
   access(id: string): Promise<PersonaAccess[]>;
   replaceAccess(id: string, access: ReadonlyArray<PersonaAccessEntry>, by: string): Promise<void>;
-  /** The persona pinned in a channel, if any. */
   pinnedIn(channel: ScopeId): Promise<string | null>;
   roles(grantees: readonly ScopeId[], id?: string): Promise<Map<string, PersonaRole>>;
   listFor(grantees: readonly ScopeId[]): Promise<Array<Persona & { role: PersonaRole }>>;
@@ -235,12 +232,6 @@ export function createPostgresPersonaStore(connectionString: string, opts: { id?
       if (!access.some((entry) => entry.role === "owner")) throw new PersonaOwnerRequired();
       await withPgTransaction(await pool(), async (db) => {
         await db.query("SELECT 1 FROM personas WHERE id = $1 FOR UPDATE", [id]);
-        const pinTaken = await db.query(
-          `SELECT grantee_scope_id FROM persona_access
-            WHERE pinned AND persona_id <> $1 AND grantee_scope_id = ANY($2) LIMIT 1`,
-          [id, access.filter((entry) => entry.pinned).map((entry) => entry.scopeId)],
-        );
-        if (pinTaken.rows[0]) throw new PersonaChannelPinned(pinTaken.rows[0].grantee_scope_id as ScopeId);
         const user = await ensureUserIn(db, foldPrincipalId(by));
         const kept = access.map((entry) => entry.scopeId);
         await db.query("DELETE FROM persona_access WHERE persona_id = $1 AND NOT (grantee_scope_id = ANY($2))", [

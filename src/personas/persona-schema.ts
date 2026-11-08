@@ -63,10 +63,6 @@ export const PERSONA_MIGRATIONS: PgMigrationDefinition[] = [
     id: "users/v2/0006-persona-channel-pins",
     statements: [
       `ALTER TABLE persona_access ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT false`,
-      `DO $$ BEGIN
-         ALTER TABLE persona_access ADD CONSTRAINT persona_access_pin_channel
-           CHECK (NOT pinned OR grantee_scope_id LIKE 'channel:%');
-       EXCEPTION WHEN duplicate_object THEN NULL; END $$`,
       `CREATE UNIQUE INDEX IF NOT EXISTS persona_access_one_pin ON persona_access(grantee_scope_id) WHERE pinned`,
     ],
   },

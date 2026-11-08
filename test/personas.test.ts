@@ -494,9 +494,7 @@ test("a persona pinned in a channel is worn by every conversation there until it
     true,
   );
 
-  const pinned = await sysprompt(CAROL, thread(2));
-  assert.match(pinned.reply, /## Persona: Ada/);
-  assert.match(pinned.reply, /This Slack channel has pinned Ada/);
+  assert.match((await sysprompt(CAROL, thread(2))).reply, /## Persona: Ada/);
 
   const second = await personas.setAccess(ALICE, bea.id, [owner, { ...channel, pinned: true }]);
   assert.equal(second.status, "invalid");

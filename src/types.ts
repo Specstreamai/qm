@@ -3,6 +3,7 @@ import type { ResolvedSecurityPolicy } from "./security/security-posture.ts";
 import type { SharingPosture } from "./resolution/sharing-posture.ts";
 import type { SurfaceAccount, TurnSurfaceOrigin } from "./surfaces/contract.ts";
 import type { SessionOrigin } from "./sessions/session-store.ts";
+import type { ProjectIcon } from "./projects/project-store.ts";
 
 export type PrincipalType = "internal" | "guest";
 
@@ -32,12 +33,10 @@ export function scopeId(kind: ScopeKind, ref: string): ScopeId {
   return `${kind}:${ref}`;
 }
 
-/** The persona a turn wore, carried on what it posts so surfaces can show it. */
 export interface WornPersona {
   id: string;
   name: string;
-  /** Same shape as a project icon: one Unicode emoji, or a workspace custom emoji by name. */
-  icon?: { kind: "emoji"; value: string } | { kind: "custom"; name: string };
+  icon?: ProjectIcon;
 }
 
 export function personalScope(principalId: string): ScopeId {
