@@ -453,7 +453,7 @@ function piAssistantFailure(session: AssistantTextSession): ProviderTurnError | 
   return providerTurnError(failed, { contextWindow, lastInputTokens: lastInputTokens(session, failed) });
 }
 
-const FALLBACK_CODES = new Set(["refusal", "model_unavailable", "model_budget", "auth"]);
+const FALLBACK_CODES = new Set(["refusal", "model_unavailable", "model_budget", "auth", "account"]);
 const DOCUMENT_REJECTION_CODES = new Set(["context_too_long", "bad_request"]);
 
 function documentsDroppedNote(documents: readonly DocumentInput[]): string {
@@ -507,6 +507,7 @@ function fallbackFailed(failure: ProviderTurnError, fallback: ModelRoute, reason
     retryable: false,
     status: failure.status,
     raw: failure.raw,
+    modelName: failure.modelName,
   });
 }
 
@@ -516,6 +517,7 @@ function routeFailed(failure: ProviderTurnError, route: ModelRoute): ProviderTur
     retryable: failure.retryable,
     status: failure.status,
     raw: failure.raw,
+    modelName: failure.modelName,
   });
 }
 

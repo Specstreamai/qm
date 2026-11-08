@@ -1,5 +1,6 @@
 import { reportBackendError } from "../../plugins/chassis/src/error-reporting.ts";
 import { errorAlreadyReported, markErrorReported } from "../util/errors.ts";
+import { isProviderDecision } from "../core/turn-error.ts";
 import type { ScopeId } from "../types.ts";
 
 export interface ErrorEvent {
@@ -23,7 +24,8 @@ export function withErrorReporting(store: ErrorLog): ErrorLog {
     ...store,
     record(event, error) {
       if (!errorAlreadyReported(error)) {
-        reportBackendError(error ?? new Error(event.message), `${event.category}:${event.code}`, { ...event });
+        if (!isProviderDecision(error))
+          reportBackendError(error ?? new Error(event.message), `${event.category}:${event.code}`, { ...event });
         markErrorReported(error);
       }
       store.record(event);

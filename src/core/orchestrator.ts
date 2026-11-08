@@ -196,6 +196,7 @@ import { headSlice, pgTextSafe, trimTrailingSlashes } from "../util/text.ts";
 import { absoluteAppLinks } from "../util/markdown.ts";
 import {
   isModelBudget,
+  isProviderDecision,
   isNonRetryable,
   NonRetryableTurnError,
   ProviderTurnError,
@@ -4073,7 +4074,7 @@ export function createOrchestrator(deps: OrchestratorDeps): Orchestrator {
         deps.errors?.record(
           {
             category: "turn",
-            code: budget ? "model_budget" : "error",
+            code: isProviderDecision(err) ? err.code : "error",
             message: err instanceof ProviderTurnError ? err.raw : errMessage(err),
             scopeLabel: scopeId,
             sessionId: session.id,
