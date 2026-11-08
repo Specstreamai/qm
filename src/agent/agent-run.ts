@@ -57,7 +57,7 @@ const TURN_EFFORT_LEVELS = new Set<string>([
 import type { ConversationTurn, StopScope } from "../types.ts";
 import { isAgentReply, isUserItem, type Item } from "../sessions/items.ts";
 import type { LlmCallUsage } from "../sessions/session-store.ts";
-import { NonRetryableTurnError, ProviderTurnError } from "../core/turn-error.ts";
+import { isProviderDecision, NonRetryableTurnError, ProviderTurnError } from "../core/turn-error.ts";
 import {
   DESCRIPTIVE_TITLE_MODEL_ID,
   DESCRIPTIVE_TITLE_PROMPT,
@@ -501,14 +501,19 @@ export function piTurnError(session: AssistantTextSession, thrown: unknown, mess
   return thrown instanceof Error ? thrown : new Error(String(thrown));
 }
 
-function fallbackFailed(failure: ProviderTurnError, fallback: ModelRoute, reason: string): ProviderTurnError {
-  return new ProviderTurnError(`${failure.message} — the fallback ${routeLabel(fallback)} also failed: ${reason}`, {
-    code: failure.code,
-    retryable: false,
-    status: failure.status,
-    raw: failure.raw,
-    modelName: failure.modelName,
-  });
+function fallbackFailed(failure: ProviderTurnError, fallback: ModelRoute, error: unknown): ProviderTurnError {
+  const own = error instanceof ProviderTurnError ? error.code : "unknown";
+  const code = isProviderDecision(error) ? failure.code : own;
+  return new ProviderTurnError(
+    `${failure.message} — the fallback ${routeLabel(fallback)} also failed: ${errMessage(error)}`,
+    {
+      code,
+      retryable: false,
+      status: failure.status,
+      raw: failure.raw,
+      modelName: failure.modelName,
+    },
+  );
 }
 
 function routeFailed(failure: ProviderTurnError, route: ModelRoute): ProviderTurnError {
@@ -1302,7 +1307,7 @@ export function createAgent(opts?: AgentOptions): Agent {
             return true;
           } catch (e) {
             if (userAborted || turn.cancel?.aborted) return false;
-            fallbackFailure = fallbackFailed(failure, fallback, errMessage(e));
+            fallbackFailure = fallbackFailed(failure, fallback, e);
             throw fallbackFailure;
           }
         };
@@ -1634,7 +1639,7 @@ export function createAgent(opts?: AgentOptions): Agent {
         try {
           return await summarize(fallback);
         } catch (fallbackError) {
-          throw fallbackFailed(failure, fallback, errMessage(fallbackError));
+          throw fallbackFailed(failure, fallback, fallbackError);
         }
       }
     },

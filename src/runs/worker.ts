@@ -4,7 +4,13 @@ import type { ErrorLog } from "../admin/error-log.ts";
 import { conversationScope } from "../resolution/resolution-service.ts";
 import type { TurnResult } from "../types.ts";
 import type { Orchestrator } from "../core/orchestrator.ts";
-import { isNonRetryable, NonRetryableTurnError, ProviderTurnError, turnFailureMessage } from "../core/turn-error.ts";
+import {
+  isNonRetryable,
+  NonRetryableTurnError,
+  ProviderTurnError,
+  turnErrorCode,
+  turnFailureMessage,
+} from "../core/turn-error.ts";
 import {
   countedClaims,
   errorParks,
@@ -155,7 +161,7 @@ async function attemptRun(
       deps.errors?.record(
         {
           category: "turn",
-          code: "error",
+          code: turnErrorCode(err),
           message: `run ${run.id}: ${errMessage(err)}`,
           scopeLabel: conversationScope(run.request.conversation, run.request.actor.id),
         },
